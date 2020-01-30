@@ -1,0 +1,62 @@
+apiVersion: getambassador.io/v2
+kind: AuthService
+metadata:
+  name: authentication
+spec:
+  ambassador_id: string-or-string-list # optional; default is ["default"]
+  auth_service: "uawauthservice-service:8080"
+  tls: true                         
+  proto: http                       
+  timeout_ms: 30000
+  #allow_request_body: true         # deprecated; use include_body instead
+  include_body:                     # optional; default is null
+    max_bytes: 4096                   # required
+    allow_partial: true               # required
+  status_on_error:                  # optional
+    code: 503                         # optional; default is 403
+  failure_mode_allow: false         # optional; default is false
+  # the following are used only if `proto: http`; they are ignored if `proto: grpc`
+  path_prefix: "/auth"
+  allowed_request_headers:         # optional; default is []
+  - "Origin"
+  - "Access-Control-Request-Method"
+  - "Access-Control-Request-Headers"
+  - "x-bigip-lb"
+  - "Content-Type"
+  - "X-Forwarded-Server"
+  - "x-example-header"
+  allowed_authorization_headers:   # optional; default is []
+  - "Authorization"
+  - "REMOTE_USER"
+  - "Proxy-Remote-User"
+  - "OAM_REMOTE_USER"
+  add_linkerd_headers: bool        # optional; default is based on the ambassador Module
+  
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ambassador
+  annotations:
+    getambassador.io/config: |
+---
+apiVersion: getambassador.io/v2
+kind: Module
+name: ambassador
+config:
+  enable_grpc_web: True
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+   - name: http
+     port: 80
+     targetPort: 8080
+   - name: https
+     port: 443
+     targetPort: 8443
+  selector:
+    service: ambassador
+  
